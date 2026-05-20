@@ -53,12 +53,32 @@ jobs:
 
       - name: Validate required files and fields
         run: |
-          for f in action.yml README.md LICENSE CHANGELOG.md cleanup/action.yml; do
+          # Required files post-refactor: action.yml + cleanup/action.yml are
+          # YAML wrappers; the MDM-writing and cleanup logic lives in shell
+          # scripts under scripts/ and cleanup/.
+          for f in action.yml README.md LICENSE CHANGELOG.md \
+                   cleanup/action.yml cleanup/cleanup.sh \
+                   scripts/04-write-mdm.sh; do
             [ -f "$f" ] || { echo "Missing: $f"; exit 1; }
           done
-          grep -q "auth_client_id" action.yml || { echo "auth_client_id missing from action.yml"; exit 1; }
-          grep -q "auth_client_secret" action.yml || { echo "auth_client_secret missing from action.yml"; exit 1; }
-          grep -q "MDM_PATH" cleanup/action.yml || { echo "MDM_PATH missing from cleanup/action.yml"; exit 1; }
+
+          # MDM key names live in the script that writes the MDM XML.
+          grep -q "auth_client_id" scripts/04-write-mdm.sh \
+            || { echo "auth_client_id missing from scripts/04-write-mdm.sh"; exit 1; }
+          grep -q "auth_client_secret" scripts/04-write-mdm.sh \
+            || { echo "auth_client_secret missing from scripts/04-write-mdm.sh"; exit 1; }
+
+          # action.yml must still wire the secret inputs through to the script
+          # via env vars (the actual credential flow).
+          grep -q "AUTH_CLIENT_ID" action.yml \
+            || { echo "AUTH_CLIENT_ID env wiring missing from action.yml"; exit 1; }
+          grep -q "AUTH_CLIENT_SECRET" action.yml \
+            || { echo "AUTH_CLIENT_SECRET env wiring missing from action.yml"; exit 1; }
+
+          # Cleanup must still know which file holds the credentials at rest.
+          grep -q "MDM_PATH" cleanup/cleanup.sh \
+            || { echo "MDM_PATH missing from cleanup/cleanup.sh"; exit 1; }
+
           echo "Validation passed."
 
   # ---------------------------------------------------------------------------
