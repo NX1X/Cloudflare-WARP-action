@@ -1,5 +1,5 @@
 name: 'Cloudflare WARP Setup'
-description: 'Install and enroll the Cloudflare WARP client on a GitHub Actions runner using a Zero Trust service token - full network access to internal resources'
+description: 'Headless Cloudflare WARP enrollment for GitHub Actions runners. Full network access via your Zero Trust org.'
 author: 'NX1X'
 
 branding:
