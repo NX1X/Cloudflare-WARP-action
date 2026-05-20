@@ -1,0 +1,117 @@
+name: Test Action
+
+# =============================================================================
+# Manual smoke-test for cloudflare-warp-action.
+# Requires a real Cloudflare Zero Trust org with a Service Auth device
+# enrollment policy and a service token.
+#
+# Required secrets (set in repository settings):
+#   CF_WARP_ORG               - Zero Trust team name (the subdomain)
+#   CF_WARP_CLIENT_ID         - service token Client ID
+#   CF_WARP_CLIENT_SECRET     - service token Client Secret
+#
+# Optional secrets:
+#   WARP_TEST_HOST            - internal host or IP to ping for verification
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'WARP mode'
+        required: false
+        default: 'warp'
+        type: choice
+        options:
+          - warp
+          - proxy
+          - doh
+          - warp+doh
+      test-connection:
+        description: 'Verify the connection'
+        required: false
+        default: true
+        type: boolean
+      retry-count:
+        description: 'Connection retry attempts'
+        required: false
+        default: '3'
+      retry-delay:
+        description: 'Seconds between retries'
+        required: false
+        default: '5'
+      exclude-routes:
+        description: 'CIDRs to exclude from WARP (newline-separated)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Cloudflare WARP
+        id: warp
+        uses: ./
+        with:
+          organization:        ${{ secrets.CF_WARP_ORG }}
+          auth-client-id:      ${{ secrets.CF_WARP_CLIENT_ID }}
+          auth-client-secret:  ${{ secrets.CF_WARP_CLIENT_SECRET }}
+          mode:                ${{ inputs.mode }}
+          test-connection:     ${{ inputs.test-connection }}
+          test-host:           ${{ secrets.WARP_TEST_HOST }}
+          retry-count:         ${{ inputs.retry-count }}
+          retry-delay:         ${{ inputs.retry-delay }}
+          exclude-routes:      ${{ inputs.exclude-routes }}
+
+      - name: Verify outputs
+        env:
+          WARP_VERSION: ${{ steps.warp.outputs.warp-version }}
+          STATUS:       ${{ steps.warp.outputs.connection-status }}
+          WARP_IP:      ${{ steps.warp.outputs.warp-ip }}
+        run: |
+          echo "warp-version: $WARP_VERSION"
+          echo "connection-status: $STATUS"
+          echo "warp-ip: $WARP_IP"
+          [ -n "$WARP_VERSION" ] || { echo "FAIL: warp-version output empty"; exit 1; }
+          [ -n "$STATUS" ] || { echo "FAIL: connection-status output empty"; exit 1; }
+
+      - name: Show WARP status
+        run: |
+          warp-cli --accept-tos status
+          echo "---"
+          warp-cli --accept-tos settings | head -n 20 || true
+
+      - name: Verify WARP routes outbound traffic
+        # cdn-cgi/trace returns warp=on/plus when traffic is routed via WARP.
+        # Skip when mode=doh (no tunnel) or mode=proxy (no transparent routing).
+        if: inputs.mode == 'warp' || inputs.mode == 'warp+doh'
+        run: |
+          TRACE=$(curl -fsS https://www.cloudflare.com/cdn-cgi/trace/ || true)
+          echo "$TRACE"
+          if echo "$TRACE" | grep -q '^warp=on\|^warp=plus'; then
+            echo "Outbound traffic confirmed routed via WARP"
+          else
+            echo "WARN: warp=off in cdn-cgi/trace - traffic may not be routed via WARP"
+          fi
+
+      - name: Cleanup
+        uses: ./cleanup
+        if: always()
+
+      - name: Verify cleanup
+        if: always()
+        run: |
+          [ ! -f ~/.cloudflare-warp-state ] || { echo "FAIL: state file not removed"; exit 1; }
+          if sudo test -f /var/lib/cloudflare-warp/mdm.xml; then
+            echo "FAIL: MDM file not removed (would leave credentials at rest)"
+            exit 1
+          fi
+          echo "Cleanup verified"

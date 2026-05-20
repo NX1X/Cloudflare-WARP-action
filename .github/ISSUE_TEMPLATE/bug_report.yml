@@ -1,0 +1,99 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below.
+
+        **Do NOT include service token Client IDs, Client Secrets, or any credentials in this issue.** Redact them before pasting logs.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal workflow YAML or steps to reproduce the behavior. Redact secrets.
+      placeholder: |
+        1. Used the action with these inputs: ...
+        2. Ran `ssh internal-host`
+        3. Got error: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened (include error output if any - REDACT credentials).
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Action Version
+      description: "Which version of the action are you using? (e.g. v1, v1.0.0)"
+      placeholder: "v1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runner
+    attributes:
+      label: Runner OS
+      options:
+        - ubuntu-latest (Ubuntu 24.04)
+        - ubuntu-22.04
+        - ubuntu-20.04
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: warp-version
+    attributes:
+      label: WARP Client Version
+      description: "Output of `warp-cli --version` from the failing run, or 'unknown' if the install step failed"
+      placeholder: "2024.6.415"
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Connection Mode
+      options:
+        - warp (full tunnel)
+        - proxy (SOCKS5/HTTP)
+        - doh (DNS-only)
+        - warp+doh
+    validations:
+      required: true
+
+  - type: textarea
+    id: warp-status
+    attributes:
+      label: warp-cli status output
+      description: "Output of `warp-cli status` if the daemon was reachable. Redact any device/account IDs."
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, logs, or screenshots. Redact any secrets, service tokens, device IDs, or account IDs.

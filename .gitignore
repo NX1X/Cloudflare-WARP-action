@@ -1,0 +1,56 @@
+# OS
+.DS_Store
+desktop.ini
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Node (if tooling is added later)
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+
+# Local test overrides
+.env
+.env.local
+
+# Private keys and certificates - never commit
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa
+id_ed25519
+id_ecdsa
+
+# WARP MDM files - never commit (would leak service token credentials)
+mdm.xml
+
+# Assets (local reference images/icons, not part of the action)
+assets/
+
+# Local dev notes (personal scratch, not for commit).
+# HOW-IT-WORKS.md and ROADMAP.md are kept under docs/ AND committed - the
+# explicit `!` exceptions below override the directory-wide ignore.
+docs/*
+!docs/HOW-IT-WORKS.md
+!docs/ROADMAP.md
+
+# Internal docs (private, never committed)
+docs-internal/
+
+# GitHub Copilot / IDE instructions (local only)
+.github/instructions/

@@ -1,0 +1,151 @@
+name: 'Cloudflare WARP Setup'
+description: 'Install and enroll the Cloudflare WARP client on a GitHub Actions runner using a Zero Trust service token - full network access to internal resources'
+author: 'NX1X'
+
+branding:
+  icon: 'shield'
+  color: 'orange'
+
+# =============================================================================
+# Inputs
+# =============================================================================
+inputs:
+  organization:
+    description: 'Cloudflare Zero Trust organization/team name (the subdomain in https://<team>.cloudflareaccess.com)'
+    required: true
+
+  auth-client-id:
+    description: 'Cloudflare Access service token Client ID (used for headless device enrollment)'
+    required: true
+
+  auth-client-secret:
+    description: 'Cloudflare Access service token Client Secret (used for headless device enrollment)'
+    required: true
+
+  mode:
+    description: 'WARP connection mode: "warp" (full tunnel), "proxy" (local SOCKS5/HTTP proxy), "doh" (DNS-only), or "warp+doh"'
+    required: false
+    default: 'warp'
+
+  exclude-routes:
+    description: 'CIDR ranges to exclude from the WARP tunnel (split-tunnel exclude mode, one per line). Example: "192.168.0.0/16"'
+    required: false
+    default: ''
+
+  include-routes:
+    description: 'CIDR ranges to include in the WARP tunnel (split-tunnel include-only mode, one per line). When set, ONLY these ranges are routed through WARP.'
+    required: false
+    default: ''
+
+  test-connection:
+    description: 'Verify WARP is connected after setup'
+    required: false
+    default: 'true'
+
+  test-host:
+    description: 'Internal hostname or IP to ping for connection verification (optional, only used when test-connection is true)'
+    required: false
+    default: ''
+
+  retry-count:
+    description: 'Number of attempts when waiting for connection / pinging the test host'
+    required: false
+    default: '3'
+
+  retry-delay:
+    description: 'Seconds to wait between retry attempts'
+    required: false
+    default: '5'
+
+# =============================================================================
+# Outputs
+# =============================================================================
+outputs:
+  warp-version:
+    description: 'Installed cloudflare-warp client version (e.g. "2024.6.415")'
+    value: ${{ steps.install-warp.outputs.warp-version }}
+  connection-status:
+    description: 'Final WARP connection status: "connected", "failed", or "skipped"'
+    value: ${{ steps.verify-connection.outputs.connection-status || steps.verify-skipped.outputs.connection-status }}
+  warp-ip:
+    description: 'The runner''s WARP tunnel IPv4 address on the CloudflareWARP interface (empty if interface unavailable)'
+    value: ${{ steps.capture-ip.outputs.warp-ip }}
+
+# =============================================================================
+# Composite action steps. Each step delegates to a script in scripts/ so the
+# logic can be unit-tested. Secrets stay in env: blocks - never on a command
+# line.
+# =============================================================================
+runs:
+  using: 'composite'
+  steps:
+
+    - name: Validate inputs
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        RETRY_COUNT: ${{ inputs.retry-count }}
+        RETRY_DELAY: ${{ inputs.retry-delay }}
+        EXCLUDE_ROUTES: ${{ inputs.exclude-routes }}
+        INCLUDE_ROUTES: ${{ inputs.include-routes }}
+        ORGANIZATION: ${{ inputs.organization }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/01-validate-inputs.sh"
+
+    - name: Install cloudflare-warp
+      id: install-warp
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/02-install-warp.sh"
+
+    - name: Wait for warp-svc daemon
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/03-wait-daemon.sh"
+
+    - name: Write MDM configuration
+      shell: bash
+      env:
+        ORGANIZATION: ${{ inputs.organization }}
+        AUTH_CLIENT_ID: ${{ inputs.auth-client-id }}
+        AUTH_CLIENT_SECRET: ${{ inputs.auth-client-secret }}
+        MODE: ${{ inputs.mode }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/04-write-mdm.sh"
+
+    - name: Restart warp-svc and wait for registration
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/05-restart-and-register.sh"
+
+    - name: Configure split-tunnel routes
+      if: inputs.exclude-routes != '' || inputs.include-routes != ''
+      shell: bash
+      env:
+        EXCLUDE_ROUTES: ${{ inputs.exclude-routes }}
+        INCLUDE_ROUTES: ${{ inputs.include-routes }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/06-split-tunnel.sh"
+
+    - name: Connect WARP
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/07-connect.sh"
+
+    - name: Verify connection
+      id: verify-connection
+      if: inputs.test-connection == 'true'
+      shell: bash
+      env:
+        RETRY_COUNT: ${{ inputs.retry-count }}
+        RETRY_DELAY: ${{ inputs.retry-delay }}
+        TEST_HOST: ${{ inputs.test-host }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/08-verify-connection.sh"
+
+    - name: Set connection-status (skipped)
+      id: verify-skipped
+      if: inputs.test-connection != 'true'
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/set-skipped-status.sh"
+
+    - name: Capture WARP IP
+      id: capture-ip
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/09-capture-ip.sh"
+
+    - name: Write cleanup state
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/10-write-state.sh"

@@ -1,0 +1,41 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Shell Logic Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install iproute2 (provides `ip` for capture-ip tests)
+        run: sudo apt-get install -y iproute2
+
+      - name: Run test suite (sources real scripts/, uses mock warp-cli)
+        run: bash tests/run.sh
+
+  shellcheck-scripts:
+    name: Shellcheck extracted scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Shellcheck
+        run: |
+          # severity=warning: SC1091 (can't follow dynamic source path) and
+          # SC2016 (literal $vars in single quotes, used intentionally in
+          # injection-safety tests) are info-level.
+          shellcheck --severity=warning -x scripts/*.sh scripts/lib/*.sh cleanup/cleanup.sh tests/*.sh

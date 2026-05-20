@@ -1,0 +1,154 @@
+name: Release
+
+# =============================================================================
+# Manual release workflow - triggered from the Actions tab only.
+#
+# What this workflow does:
+#   1. Validates the version input format
+#   2. Runs lint + validation checks
+#   3. Extracts release notes from CHANGELOG.md
+#   4. Creates a git tag and GitHub Release
+#   5. Updates the floating major version tag (v1 -> latest v1.x.x)
+#      so users who pin to @v1 automatically get patch/minor updates.
+#
+# How to release:
+#   1. Update CHANGELOG.md - add a [X.Y.Z] section
+#   2. Go to Actions -> Release -> Run workflow
+#   3. Enter the version (e.g. 1.0.1)
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.1)'
+        required: true
+        type: string
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Validate + lint (same checks as CI)
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install actionlint
+        run: |
+          ACTIONLINT_VERSION="1.7.7"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -o /tmp/actionlint.tar.gz
+          tar xzf /tmp/actionlint.tar.gz -C /tmp
+          sudo mv /tmp/actionlint /usr/local/bin/
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run actionlint
+        run: actionlint
+
+      - name: Validate required files and fields
+        run: |
+          for f in action.yml README.md LICENSE CHANGELOG.md cleanup/action.yml; do
+            [ -f "$f" ] || { echo "Missing: $f"; exit 1; }
+          done
+          grep -q "auth_client_id" action.yml || { echo "auth_client_id missing from action.yml"; exit 1; }
+          grep -q "auth_client_secret" action.yml || { echo "auth_client_secret missing from action.yml"; exit 1; }
+          grep -q "MDM_PATH" cleanup/action.yml || { echo "MDM_PATH missing from cleanup/action.yml"; exit 1; }
+          echo "Validation passed."
+
+  # ---------------------------------------------------------------------------
+  # 2. Create the GitHub Release
+  # ---------------------------------------------------------------------------
+  release:
+    name: Release
+    needs: [validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate and parse version
+        id: version
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          if ! echo "$VERSION_INPUT" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Invalid version format '$VERSION_INPUT' - expected X.Y.Z"
+            exit 1
+          fi
+          TAG="v${VERSION_INPUT}"
+          MAJOR="v$(echo "$VERSION_INPUT" | cut -d. -f1)"
+          {
+            echo "tag=${TAG}"
+            echo "version_num=${VERSION_INPUT}"
+            echo "major=${MAJOR}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Tag: $TAG | Version: $VERSION_INPUT | Major: $MAJOR"
+
+      - name: Check tag does not already exist
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "ERROR: Tag $TAG already exists"
+            exit 1
+          fi
+
+      - name: Extract release notes from CHANGELOG.md
+        env:
+          VERSION_NUM: ${{ steps.version.outputs.version_num }}
+        run: |
+          NOTES=$(awk "/^## \[${VERSION_NUM}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            echo "WARNING: No section for [${VERSION_NUM}] in CHANGELOG.md - using generic notes."
+            NOTES="See [CHANGELOG.md](CHANGELOG.md) for details."
+          else
+            echo "Extracted release notes for [${VERSION_NUM}]."
+          fi
+          echo "$NOTES" > /tmp/release_notes.md
+
+      - name: Create version tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update floating major version tag
+        # Moves the major version tag (e.g. v1) to point to this new release.
+        # Users who pin to @v1 automatically receive patch/minor updates.
+        env:
+          MAJOR: ${{ steps.version.outputs.major }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Delete the old major tag locally and remotely, then recreate it
+          git tag -d "$MAJOR" 2>/dev/null || true
+          git push origin ":refs/tags/${MAJOR}" 2>/dev/null || true
+          git tag "$MAJOR"
+          git push origin "$MAJOR"
+
+          echo "Updated $MAJOR -> $TAG"

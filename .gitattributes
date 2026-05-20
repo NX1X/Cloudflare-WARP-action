@@ -1,0 +1,22 @@
+# Enforce LF line endings on everything text-based so the repo is consistent
+# across Windows, macOS, and Linux contributors. Shell scripts and YAML
+# workflows MUST be LF - CRLF on a Linux runner causes `bad interpreter` and
+# `\r: command not found` errors.
+
+* text=auto eol=lf
+
+# Belt-and-braces for the file types that run on Linux runners.
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+LICENSE     text eol=lf
+
+# Files that should never be touched as text.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary

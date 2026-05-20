@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discussions
+    url: https://github.com/NX1X/cloudflare-warp-action/discussions
+    about: Ask questions and discuss ideas
+  - name: Security vulnerability
+    url: https://github.com/NX1X/cloudflare-warp-action/security/advisories/new
+    about: Report a security issue privately (do NOT use public issues)

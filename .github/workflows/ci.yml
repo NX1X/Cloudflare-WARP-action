@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install actionlint
+        run: |
+          ACTIONLINT_VERSION="1.7.7"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -o /tmp/actionlint.tar.gz
+          tar xzf /tmp/actionlint.tar.gz -C /tmp
+          sudo mv /tmp/actionlint /usr/local/bin/
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run actionlint (validates action YAML + shell scripts)
+        run: actionlint
+
+      - name: Run shellcheck on extracted scripts
+        run: |
+          # severity=warning: SC1091 (can't follow dynamic source path) and
+          # SC2016 (literal $vars in single quotes, used intentionally for
+          # injection-safety tests) are info-level. Real issues fail the build.
+          shellcheck --severity=warning -x scripts/*.sh scripts/lib/*.sh cleanup/cleanup.sh tests/*.sh
+
+      - name: Validate action.yml structure
+        run: |
+          echo "=== Checking required files ==="
+          for f in action.yml README.md LICENSE CHANGELOG.md; do
+            if [ -f "$f" ]; then
+              echo "  ok $f"
+            else
+              echo "  MISSING $f"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "=== Checking action.yml has required fields ==="
+          failed=0
+          for field in name description author runs; do
+            if grep -q "^${field}:" action.yml; then
+              echo "  ok ${field}"
+            else
+              echo "  MISSING ${field}"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then exit 1; fi
+
+          echo ""
+          echo "=== Checking MDM file uses correct keys ==="
+          for key in organization auth_client_id auth_client_secret service_mode auto_connect; do
+            if grep -q "$key" action.yml scripts/04-write-mdm.sh 2>/dev/null; then
+              echo "  ok ${key} present"
+            else
+              echo "  MISSING MDM key: ${key}"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "=== Checking secrets are routed through env: blocks ==="
+          # Inputs that contain credentials must never appear inline in run: blocks
+          # or anywhere in shell scripts (where they could leak via process args).
+          # Build the GitHub Actions interpolation prefix from char codes so
+          # actionlint does not parse the regex itself as an expression.
+          DOLLAR_BRACE=$(printf '\x24\x7b\x7b')
+          for secret_input in "inputs.auth-client-id" "inputs.auth-client-secret"; do
+            INLINE=$(awk '/^[[:space:]]*run:[[:space:]]*\|/,/^[[:space:]]*-[[:space:]]*name:/' action.yml cleanup/action.yml 2>/dev/null \
+              | grep -c "${DOLLAR_BRACE}[[:space:]]*${secret_input}[[:space:]]*}}" || true)
+            if [ "$INLINE" -gt 0 ]; then
+              echo "  FAIL: ${secret_input} appears inside a run: block (must be in env: only)"
+              exit 1
+            else
+              echo "  ok ${secret_input} only used in env: blocks"
+            fi
+            # Scripts must never reference these expressions at all.
+            if grep -rn "${secret_input}" scripts/ 2>/dev/null; then
+              echo "  FAIL: ${secret_input} expression appears inside scripts/"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "=== Checking cleanup/action.yml ==="
+          if [ ! -f cleanup/action.yml ]; then
+            echo "  MISSING cleanup/action.yml"
+            exit 1
+          fi
+          echo "  ok cleanup/action.yml exists"
+
+          for field in name description runs; do
+            if grep -q "^${field}:" cleanup/action.yml; then
+              echo "  ok cleanup ${field}"
+            else
+              echo "  MISSING cleanup ${field}"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then exit 1; fi
+
+          echo ""
+          echo "=== Checking cleanup deletes MDM file (credentials at rest) ==="
+          if grep -q "MDM_PATH" cleanup/action.yml cleanup/cleanup.sh 2>/dev/null; then
+            echo "  ok cleanup removes MDM file"
+          else
+            echo "  FAIL: cleanup does not appear to remove the MDM file"
+            exit 1
+          fi
+
+          echo ""
+          echo "All checks passed."

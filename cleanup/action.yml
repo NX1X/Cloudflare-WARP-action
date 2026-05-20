@@ -1,0 +1,22 @@
+name: 'Cloudflare WARP Cleanup'
+description: 'Disconnect WARP, delete the device registration, and remove the MDM file created by cloudflare-warp-action'
+author: 'NX1X'
+
+branding:
+  icon: 'trash-2'
+  color: 'orange'
+
+inputs:
+  remove-warp:
+    description: 'Also uninstall the cloudflare-warp package (apt remove)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clean up WARP
+      shell: bash
+      env:
+        REMOVE_WARP: ${{ inputs.remove-warp }}
+      run: bash "$GITHUB_ACTION_PATH/cleanup.sh"
