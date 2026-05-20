@@ -1,0 +1,63 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":rebaseStalePrs",
+    "security:openssf-scorecard",
+    "helpers:pinGitHubActionDigests"
+  ],
+
+  "timezone": "UTC",
+  "schedule": ["before 6am"],
+
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "dependencies"],
+    "minimumReleaseAge": null,
+    "schedule": ["at any time"]
+  },
+  "osvVulnerabilityAlerts": true,
+
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 4,
+
+  "rangeStrategy": "pin",
+  "pinDigests": true,
+
+  "github-actions": {
+    "fileMatch": ["(^|/)\\.github/workflows/[^/]+\\.ya?ml$", "(^|/)action\\.ya?ml$"]
+  },
+
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "addLabels": ["github-actions"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "pin"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Hold patch updates a little longer - they sometimes need follow-up fixes from upstream",
+      "matchUpdateTypes": ["patch"],
+      "minimumReleaseAge": "5 days"
+    },
+    {
+      "description": "Major version bumps need a manual review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "minimumReleaseAge": "7 days",
+      "addLabels": ["major-update"]
+    }
+  ]
+}

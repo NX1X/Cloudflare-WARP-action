@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <!--
+    GitHub social preview / Open Graph image for cloudflare-warp-action.
+    Render to PNG at 1280x640 and upload via Settings -> General -> Social preview.
+    Design: dark slate background, orange shield icon matching the action's
+    action.yml `branding: icon: shield, color: orange` field, action title,
+    tagline, and a minimal runner -> Cloudflare -> internal-network glyph.
+  -->
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#1c2128"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6821f"/>
+      <stop offset="1" stop-color="#fbad41"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Subtle grid lines for depth -->
+  <g stroke="#22272e" stroke-width="1" opacity="0.5">
+    <line x1="0" y1="160" x2="1280" y2="160"/>
+    <line x1="0" y1="320" x2="1280" y2="320"/>
+    <line x1="0" y1="480" x2="1280" y2="480"/>
+    <line x1="320" y1="0" x2="320" y2="640"/>
+    <line x1="640" y1="0" x2="640" y2="640"/>
+    <line x1="960" y1="0" x2="960" y2="640"/>
+  </g>
+
+  <!-- Shield icon (matches action.yml branding) -->
+  <g transform="translate(96, 192)">
+    <path d="M 128 0 L 0 56 L 0 144 C 0 224 56 296 128 320 C 200 296 256 224 256 144 L 256 56 Z"
+          fill="url(#orange)"/>
+    <!-- Inner check -->
+    <path d="M 88 160 L 116 188 L 176 124"
+          stroke="#0d1117" stroke-width="16" stroke-linecap="round"
+          stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- Title -->
+  <text x="448" y="248" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
+        font-weight="800" font-size="64" fill="#f0f6fc">
+    Cloudflare WARP Action
+  </text>
+
+  <!-- Tagline -->
+  <text x="448" y="312" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
+        font-weight="500" font-size="28" fill="#8b949e">
+    Headless WARP enrollment for GitHub Actions runners.
+  </text>
+  <text x="448" y="352" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
+        font-weight="500" font-size="28" fill="#8b949e">
+    Full network access to your Zero Trust private network.
+  </text>
+
+  <!-- Flow diagram: Runner -> Cloudflare -> Internal -->
+  <g transform="translate(448, 432)" font-family="Segoe UI, system-ui, sans-serif" font-size="18" fill="#c9d1d9">
+    <!-- Node 1: Runner -->
+    <rect x="0" y="0" width="180" height="64" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <text x="90" y="32" text-anchor="middle" dominant-baseline="middle" font-weight="600">GitHub Runner</text>
+
+    <!-- Arrow 1 -->
+    <line x1="180" y1="32" x2="232" y2="32" stroke="url(#orange)" stroke-width="3"/>
+    <polygon points="232,32 222,26 222,38" fill="#fbad41"/>
+
+    <!-- Node 2: WARP -->
+    <rect x="244" y="0" width="180" height="64" rx="8" fill="#3a2410" stroke="url(#orange)" stroke-width="1.5"/>
+    <text x="334" y="32" text-anchor="middle" dominant-baseline="middle" font-weight="600" fill="#fbad41">Cloudflare WARP</text>
+
+    <!-- Arrow 2 -->
+    <line x1="424" y1="32" x2="476" y2="32" stroke="url(#orange)" stroke-width="3"/>
+    <polygon points="476,32 466,26 466,38" fill="#fbad41"/>
+
+    <!-- Node 3: Internal -->
+    <rect x="488" y="0" width="180" height="64" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <text x="578" y="32" text-anchor="middle" dominant-baseline="middle" font-weight="600">Internal network</text>
+  </g>
+
+  <!-- Footer mark -->
+  <text x="1184" y="600" text-anchor="end"
+        font-family="Segoe UI, system-ui, sans-serif" font-weight="600" font-size="20"
+        fill="#6e7681" letter-spacing="2">
+    NX1X / NXTools
+  </text>
+</svg>

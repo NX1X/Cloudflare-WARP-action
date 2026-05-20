@@ -10,9 +10,14 @@ Thumbs.db
 *.swo
 *~
 
-# Claude Code
+# Claude Code (https://claude.com/claude-code) - local AI assistant state
+# and project instructions, never committed.
 .claude/
+.claude.json
+.claude.local.json
 CLAUDE.md
+CLAUDE.local.md
+.mcp.json
 
 # Node (if tooling is added later)
 node_modules/

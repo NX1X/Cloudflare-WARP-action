@@ -8,6 +8,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-20
+
+Public-launch hardening release. No changes to action behaviour, inputs, or outputs - everything here is repository infrastructure for shipping to GitHub Marketplace.
+
+### Added
+- CodeQL Advanced security analysis workflow (`.github/workflows/codeql.yml`). Scans the `actions` language with the `security-extended` + `security-and-quality` query packs, runs on push / pull-request to `main`, and re-scans weekly so newly-published CodeQL rules pick up the codebase.
+- Renovate configuration (`.github/renovate.json`) replacing the previous Dependabot setup. Includes a 3-day cooldown (`minimumReleaseAge`) on non-security updates and 5 days on patch updates so upstream regressions surface before a PR opens; bypassed for security advisories. OSV vulnerability alerts (`osvVulnerabilityAlerts`) and the OpenSSF Scorecard preset are enabled. GitHub Actions are pinned by commit SHA (`helpers:pinGitHubActionDigests`) and digest/pin updates auto-merge once status checks pass. Schedule: daily, before 06:00 UTC.
+- Social preview image source at `.github/branding/social-preview.svg` (1280x640, matches the `branding: icon: shield, color: orange` from `action.yml`). Render to PNG and upload via repo Settings -> General -> Social preview.
+- Expanded `.gitignore` Claude Code patterns: `.claude/`, `.claude.json`, `.claude.local.json`, `CLAUDE.md`, `CLAUDE.local.md`, `.mcp.json`.
+
+### Changed
+- `.github/workflows/release.yml` validation step updated for the post-refactor layout - greps `auth_client_id` / `auth_client_secret` in `scripts/04-write-mdm.sh` (the MDM XML writer) and `MDM_PATH` in `cleanup/cleanup.sh`, while still asserting that `AUTH_CLIENT_ID` / `AUTH_CLIENT_SECRET` env wiring is preserved in `action.yml`.
+- `tests/test_install.sh` isolates the `lsb_release-missing` case from `/usr/bin` so it correctly fails on GitHub Actions runners (where `lsb_release` is pre-installed). Bash is invoked by absolute path so `env -i` can still locate the interpreter under the restricted PATH.
+
+### Removed
+- `.github/dependabot.yml` (functionality moved to Renovate; one update bot, not two).
+
+## [1.0.0] - 2026-05-20
+
 ## [1.0.0] - 2026-05-20
 
 First public release. Status: **Beta** - the full pipeline has 304 unit-test assertions against a mocked `warp-cli`, but has not yet been validated end-to-end against a real Cloudflare Zero Trust organization. Pin to `@v1.0.0` (not `@v1`) until a stable release is cut.
