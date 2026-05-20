@@ -43,23 +43,23 @@
   </g>
 
   <!-- Title -->
-  <text x="448" y="248" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
-        font-weight="800" font-size="64" fill="#f0f6fc">
+  <text x="400" y="248" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
+        font-weight="800" font-size="56" fill="#f0f6fc">
     Cloudflare WARP Action
   </text>
 
   <!-- Tagline -->
-  <text x="448" y="312" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
-        font-weight="500" font-size="28" fill="#8b949e">
+  <text x="400" y="304" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
+        font-weight="500" font-size="26" fill="#8b949e">
     Headless WARP enrollment for GitHub Actions runners.
   </text>
-  <text x="448" y="352" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
-        font-weight="500" font-size="28" fill="#8b949e">
+  <text x="400" y="340" font-family="Segoe UI, system-ui, -apple-system, sans-serif"
+        font-weight="500" font-size="26" fill="#8b949e">
     Full network access to your Zero Trust private network.
   </text>
 
   <!-- Flow diagram: Runner -> Cloudflare -> Internal -->
-  <g transform="translate(448, 432)" font-family="Segoe UI, system-ui, sans-serif" font-size="18" fill="#c9d1d9">
+  <g transform="translate(400, 424)" font-family="Segoe UI, system-ui, sans-serif" font-size="18" fill="#c9d1d9">
     <!-- Node 1: Runner -->
     <rect x="0" y="0" width="180" height="64" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
     <text x="90" y="32" text-anchor="middle" dominant-baseline="middle" font-weight="600">GitHub Runner</text>
