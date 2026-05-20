@@ -156,15 +156,21 @@ assert_equals "exit 0 without GITHUB_OUTPUT" "0" "$RC"
 assert_contains "still ran warp-cli --version" "$OUT" "warp-cli 2026.1.987"
 
 echo "=== install (lsb_release missing - hard fail with clear message) ==="
-# Remove lsb_release from the shim PATH; the script's `command -v` check should
-# trip before any apt work happens.
+# Remove lsb_release from the shim PATH AND drop /usr/bin from PATH for this
+# case - ubuntu-latest runners ship lsb_release pre-installed at
+# /usr/bin/lsb_release, so leaving /usr/bin reachable masks the failure mode
+# we are trying to exercise. The script only uses bash builtins (command -v,
+# echo, exit, set) up to the bail point, so a shim-only PATH is sufficient.
+# We invoke bash by absolute path so env -i can still locate the interpreter
+# even though /usr/bin is no longer on the child PATH.
+BASH_BIN=$(command -v bash)
 rm -f "$SHIM_BIN/lsb_release"
 : > "$CALL_LOG"
 OUT=$(env -i \
   HOME="$SANDBOX" \
-  PATH="$SHIM_BIN:/usr/bin:/bin" \
+  PATH="$SHIM_BIN" \
   CALL_LOG="$CALL_LOG" \
-  bash "$SCRIPT" 2>&1)
+  "$BASH_BIN" "$SCRIPT" 2>&1)
 RC=$?
 assert_not_equals "non-zero when lsb_release missing" "0" "$RC"
 assert_contains "error mentions lsb_release" "$OUT" "lsb_release not found"
